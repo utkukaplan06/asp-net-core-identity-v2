@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using IdentityNetCore.Data;
 using IdentityNetCore.Service;
@@ -11,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityNetCore
 {
@@ -48,7 +50,22 @@ namespace IdentityNetCore
                 options.ExpireTimeSpan = TimeSpan.FromHours(10);
             });
 
-            services.AddAuthentication().AddFacebook(options =>
+            var issuer = Configuration["Tokens:Issuer"];
+            var audience = Configuration["Tokens:Audience"];
+            var key = Configuration["Tokens:Key"];
+
+            services.AddAuthentication().AddJwtBearer(options =>
+            {
+                options.RequireHttpsMetadata = false;
+                options.SaveToken = true;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidIssuer = issuer,
+                    ValidAudience = audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
+                };
+
+            }).AddFacebook(options =>
             {
                 options.AppId = Configuration["FacebookAppId"];
                 options.AppSecret = Configuration["FacebookAppSecret"];
@@ -69,6 +86,7 @@ namespace IdentityNetCore
                     p.RequireClaim("Department", "Tech").RequireRole("Admin");
                 });
             });
+
             services.AddControllersWithViews().AddRazorRuntimeCompilation();
         }
 
